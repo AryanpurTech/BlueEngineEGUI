@@ -11,16 +11,22 @@ use blue_engine_egui::egui as gui;
 
 // Basic imports
 use blue_engine::{
-    header::{Engine, ObjectSettings, WindowDescriptor},
+    header::{Engine, ObjectSettings},
     primitive_shapes::triangle,
 };
 
 fn main() {
     // Initialize the engine with default settings
-    let mut engine = Engine::new(WindowDescriptor::default()).expect("win");
+    let mut engine = Engine::new().expect("win");
 
     // Add a triangle to the screen
-    triangle("triangle", ObjectSettings::default(), &mut engine.renderer, &mut engine.objects).unwrap();
+    triangle(
+        "triangle",
+        ObjectSettings::default(),
+        &mut engine.renderer,
+        &mut engine.objects,
+    )
+    .unwrap();
 
     // Start the egui context
     let gui_context = blue_engine_egui::EGUI::new(&engine.event_loop, &mut engine.renderer);

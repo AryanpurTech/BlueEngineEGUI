@@ -10,14 +10,11 @@
 use blue_engine_egui::{egui, EmbeddedRender};
 
 // Basic imports
-use blue_engine::{
-    header::{Engine, WindowDescriptor},
-    primitive_shapes::cube,
-};
+use blue_engine::{header::Engine, primitive_shapes::cube};
 
 fn main() {
     // Initialize the engine with default settings
-    let mut engine = Engine::new(WindowDescriptor::default()).expect("win");
+    let mut engine = Engine::new().expect("win");
 
     // the object to display
     cube("cube", &mut engine.renderer, &mut engine.objects).expect("Couldn't create the cube");

@@ -20,7 +20,8 @@ impl EGUI {
             .surface
             .as_ref()
             .unwrap()
-            .get_supported_formats(&renderer.adapter)[0];
+            .get_capabilities(&renderer.adapter)
+            .formats[0];
 
         let renderer =
             egui_wgpu::renderer::Renderer::new(&renderer.device, format, Some(DEPTH_FORMAT), 1);
