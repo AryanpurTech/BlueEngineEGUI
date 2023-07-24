@@ -229,9 +229,9 @@ dependencies = [
 
 [[package]]
 name = "blue_engine"
-version = "0.4.27"
+version = "0.4.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b14d2f4c372e87547c2ac07369be60170dcefdc8f704ff1a019c2f9b456826ff"
+checksum = "6b6c31d5b50b026e8e4587ea97b1ecb90e4c0a7b54788f1edca08bcd2aa16a27"
 dependencies = [
  "anyhow",
  "bytemuck",
