@@ -130,6 +130,19 @@ impl EnginePlugin for EGUI {
 
 // ===============================================================================================
 
+struct Callback {}
+impl egui_wgpu::CallbackTrait for Callback {
+    fn paint<'a>(
+        &'a self,
+        info: egui::PaintCallbackInfo,
+        render_pass: &mut wgpu::RenderPass<'a>,
+        callback_resources: &'a egui_wgpu::CallbackResources,
+    ) {
+        let resources: &TriangleRenderResources = callback_resources.get().unwrap();
+        resources.paint(info, render_pass, callback_resources);
+    }
+}
+
 struct TriangleRenderResources {
     pub shader: wgpu::RenderPipeline,
     pub vertex_buffer: blue_engine::VertexBuffers,
@@ -144,13 +157,19 @@ struct TriangleRenderResources {
 }
 
 impl TriangleRenderResources {
-    pub fn paint<'rp>(&'rp self, render_pass: &mut wgpu::RenderPass<'rp>) {
+    fn paint<'a>(
+        &'a self,
+        _info: egui::PaintCallbackInfo,
+        render_pass: &mut wgpu::RenderPass<'a>,
+        _callback_resources: &'a egui_wgpu::CallbackResources,
+    ) {
         render_pass.set_bind_group(0, &self.default_data.0, &[]);
         render_pass.set_pipeline(&self.default_data.1);
         render_pass.set_bind_group(1, &self.camera_data, &[]);
 
         // Draw our triangle!
         let i = self;
+        println!("{:?}", i.vertex_buffer.length);
         render_pass.set_pipeline(&i.shader);
         render_pass.set_bind_group(0, &i.texture, &[]);
 
@@ -226,31 +245,29 @@ impl EmbeddedRender {
             )
             .unwrap();
 
-        renderer
-            .paint_callback_resources
-            .insert(TriangleRenderResources {
-                shader: buffers.2,
-                texture: default_texture,
-                vertex_buffer: buffers.0,
-                uniform: buffers.1,
-                default_data: (default_texture_2, default_shader, default_uniform.0),
-                camera_data: camera_data.0,
-            });
+        renderer.callback_resources.insert(TriangleRenderResources {
+            shader: buffers.2,
+            texture: default_texture,
+            vertex_buffer: buffers.0,
+            uniform: buffers.1,
+            default_data: (default_texture_2, default_shader, default_uniform.0),
+            camera_data: camera_data.0,
+        });
 
         Some(Self {})
     }
 
     pub fn prepare(
-        &mut self,
+        &self,
         object: &mut blue_engine::Object,
         brenderer: &mut blue_engine::Renderer,
-        renderer: &mut egui_wgpu::Renderer,
+        erenderer: &mut egui_wgpu::Renderer,
         camera_data: blue_engine::UniformBuffers,
     ) {
         let object_pipeline = object.update_and_return(brenderer).unwrap();
 
         let resources: &mut TriangleRenderResources =
-            renderer.paint_callback_resources.get_mut().unwrap();
+            erenderer.callback_resources.get_mut().unwrap();
 
         resources.vertex_buffer = object_pipeline.0;
         resources.uniform = object_pipeline.1;
@@ -266,17 +283,7 @@ impl EmbeddedRender {
             egui::Sense::drag(),
         );
 
-        let cb = egui_wgpu::CallbackFn::new().paint(
-            move |_info, render_pass, paint_callback_resources| {
-                let resources: &TriangleRenderResources = paint_callback_resources.get().unwrap();
-                resources.paint(render_pass);
-            },
-        );
-
-        let callback = egui::PaintCallback {
-            rect,
-            callback: std::sync::Arc::new(cb),
-        };
+        let callback = egui_wgpu::Callback::new_paint_callback(rect, Callback {});
 
         ui.painter().add(callback);
     }
