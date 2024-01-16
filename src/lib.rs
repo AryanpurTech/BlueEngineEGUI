@@ -3,6 +3,7 @@ use blue_engine::{
 };
 
 pub use egui;
+use egui::ViewportId;
 
 /// The egui plugin
 pub struct EGUI {
@@ -10,12 +11,24 @@ pub struct EGUI {
     pub platform: egui_winit::State,
     pub renderer: egui_wgpu::renderer::Renderer,
     pub full_output: Option<egui::FullOutput>,
+    pub raw_input: Option<egui::RawInput>,
 }
 
 impl EGUI {
     /// Creates the egui context and platform details
-    pub fn new(event_loop: &blue_engine::EventLoop<()>, renderer: &mut Renderer) -> Self {
-        let platform = egui_winit::State::new(event_loop);
+    pub fn new(
+        event_loop: &blue_engine::EventLoop<()>,
+        renderer: &mut Renderer,
+        window: &Win,
+    ) -> Self {
+        let context = egui::Context::default();
+        let platform = egui_winit::State::new(
+            context,
+            ViewportId::ROOT,
+            event_loop,
+            Some(window.scale_factor() as f32),
+            Some(renderer.device.limits().max_texture_dimension_2d as usize),
+        );
         let format = renderer
             .surface
             .as_ref()
@@ -31,6 +44,7 @@ impl EGUI {
             platform,
             renderer,
             full_output: None,
+            raw_input: None,
         }
     }
 
@@ -46,7 +60,7 @@ impl EnginePlugin for EGUI {
     fn update_events(
         &mut self,
         _renderer: &mut Renderer,
-        _window: &Win,
+        window: &Win,
         _objects: &mut ObjectStorage,
         _events: &blue_engine::Event<()>,
         _input: &blue_engine::InputHelper,
@@ -55,7 +69,7 @@ impl EnginePlugin for EGUI {
         match _events {
             blue_engine::Event::WindowEvent { event, .. } => {
                 //? has a return, maybe useful in the future
-                let _ = self.platform.on_event(&self.context, event);
+                let _ = self.platform.on_window_event(window, event);
             }
             _ => {}
         }
@@ -72,22 +86,25 @@ impl EnginePlugin for EGUI {
         view: &blue_engine::TextureView,
     ) {
         if self.full_output.is_some() {
-            let full_output = self.full_output.as_ref().unwrap();
+            let egui::FullOutput {
+                platform_output,
+                textures_delta,
+                shapes,
+                pixels_per_point,
+                ..
+            } = self.full_output.as_ref().unwrap();
 
-            self.platform.handle_platform_output(
-                &window,
-                &self.context,
-                full_output.platform_output.clone(),
-            );
+            self.platform
+                .handle_platform_output(&window, platform_output.clone());
 
-            let paint_jobs = self.context.tessellate(full_output.shapes.clone());
+            let paint_jobs = self.context.tessellate(shapes.clone(), *pixels_per_point);
 
             let screen_descriptor = egui_wgpu::renderer::ScreenDescriptor {
                 size_in_pixels: [renderer.config.width, renderer.config.height],
-                pixels_per_point: self.platform.pixels_per_point(),
+                pixels_per_point: *pixels_per_point,
             };
 
-            for (id, image_delta) in &full_output.textures_delta.set {
+            for (id, image_delta) in &textures_delta.set {
                 self.renderer
                     .update_texture(&renderer.device, &renderer.queue, *id, image_delta);
             }
@@ -108,17 +125,19 @@ impl EnginePlugin for EGUI {
                             resolve_target: None,
                             ops: blue_engine::Operations {
                                 load: blue_engine::LoadOp::Load,
-                                store: true,
+                                store: wgpu::StoreOp::Store,
                             },
                         })],
                         depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                             view: &renderer.depth_buffer.1,
                             depth_ops: Some(wgpu::Operations {
                                 load: wgpu::LoadOp::Clear(1.0),
-                                store: true,
+                                store: wgpu::StoreOp::Store,
                             }),
                             stencil_ops: None,
                         }),
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
                     });
 
                 self.renderer

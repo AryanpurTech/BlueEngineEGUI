@@ -20,7 +20,8 @@ fn main() {
     cube("cube", &mut engine.renderer, &mut engine.objects).expect("Couldn't create the cube");
 
     // Start the egui context
-    let mut gui_context = blue_engine_egui::EGUI::new(&engine.event_loop, &mut engine.renderer);
+    let mut gui_context =
+        blue_engine_egui::EGUI::new(&engine.event_loop, &mut engine.renderer, &engine.window);
 
     // here we only need object temporarily
     let mut custom_rendering = {

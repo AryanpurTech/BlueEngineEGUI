@@ -7,7 +7,7 @@ This is a plugin that adds [egui](egui.rs/) support to the [Blue Engine](https:/
 To get started, initialize the plugin:
 
 ```rust
-let gui_context = blue_engine_egui::EGUI::new(&engine.event_loop, &mut engine.renderer);
+let gui_context = blue_engine_egui::EGUI::new(&engine.event_loop, &mut engine.renderer, &engine.window);
 ```
 
 This will essentially initializes the egui and create things required to run the plugin. The engine will then run it twice, once before everything else to fetch all inputs and events, and then during render, so that it displays the GUI. And all that's left, is to add the plugin to the engine and use it:
